@@ -17,3 +17,6 @@ contract C10Token is ERC20, ERC20Burnable, Ownable {
         _burn(msg.sender, amount);
     }
 }
+
+contract C10INDEX is C10Token {
+}
