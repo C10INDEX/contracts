@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./vault.sol";
 
 contract C10Token is ERC20, ERC20Burnable, Ownable {
@@ -28,7 +29,11 @@ contract C10INDEX is C10Token {
     ISwapRouter public immutable swapRouter = ISwapRouter(routerAddress);
 
     address public constant USDC = 0x65aFADD39029741B3b8f0756952C74678c9cEC93;
+    address public constant LINK = 0xe9c4393a23246293a8D31BF7ab68c17d4CF90A29;
     IERC20 public usdcToken = IERC20(USDC);
+    IERC20 public linkToken = IERC20(LINK);
+    address[2] public tokenAddresses;
+    uint256[2] public Proportion;
     C10Vault public vault;//CONTRACT DU VAULT
 
     //Chainlink data's array
@@ -39,6 +44,16 @@ contract C10INDEX is C10Token {
     struct Asset 
     {
         uint256 price;
+    }
+
+    constructor() {
+    Proportion[0] = 75;
+    Proportion[1] = 25;
+    priceFeeds = new AggregatorV3Interface[](2);
+    priceFeeds[0] = AggregatorV3Interface(0x48731cF7e84dc94C5f84577882c14Be11a5B7456); //LINK/USD price feed
+    priceFeeds[1] = AggregatorV3Interface(0x48731cF7e84dc94C5f84577882c14Be11a5B7456); //LINK/USD
+    tokenAddresses[0] = 0xe9c4393a23246293a8D31BF7ab68c17d4CF90A29;//link
+    tokenAddresses[1] = 0xe9c4393a23246293a8D31BF7ab68c17d4CF90A29;
     }
 
     function setVaultAddress(address _vault) public onlyOwner {
@@ -105,5 +120,15 @@ contract C10INDEX is C10Token {
             swap(Proportion[i]*usdcAmount /100);
         }
         //mint(usdcAmount * 1e18);  
+    }
+    function getTVL() public view returns(uint256 TVL) {
+       uint256 C10Price = 7;
+       TVL = (totalSupply() * C10Price); 
+       return TVL;
+    }
+
+    function getC10Price() public pure returns(uint256) {
+        uint256 C10Price = 700000000;
+        return C10Price;
     }
 }
