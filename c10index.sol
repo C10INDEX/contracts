@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./lastvault.sol";
 
 /* Price feeds addresses
@@ -41,19 +40,18 @@ contract C10ETF is C10Token, C10Vault {
     using SafeMath for uint256;
 
     Asset[10] public assets;
-    AggregatorV3Interface[] internal priceFeeds;
+    AggregatorV3Interface[] public priceFeeds;
 
+    address public constant DAI = 0x9C58BAcC331c9aa871AFD802DB6379a98e80CEdb;
     IERC20 public DAIToken = IERC20(DAI);
-    address public constant routerAddress = 0xA818b4F111Ccac7AA31D0BCc0806d64F2E0737D7;
-    address public constant DAI = 0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d;
-    address [10] public tokenAddresses;
     
     C10Vault public vault;
 
     mapping (address => uint256) public tokenBalances;
     
-    uint256 internal i = 0;
-    uint256 internal j = 0;
+    address [10] public tokenAddresses;
+    uint256 public i = 0;
+    uint256 public j = 0;
     uint256 public AUM_In_Usd;
     uint256 public C10_Supply;
     uint256 public C10_Price;
@@ -76,7 +74,7 @@ contract C10ETF is C10Token, C10Vault {
     constructor() {
     tokenAddresses[0] = 0x6A023CCd1ff6F2045C3309768eAd9E68F978f6e1;//WETH
     tokenAddresses[1] = 0x8e5bBbb09Ed1ebdE8674Cda39A0c169401db4252;//WBTC
-    tokenAddresses[2] = 0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d;//DAI
+    tokenAddresses[2] = 0x9C58BAcC331c9aa871AFD802DB6379a98e80CEdb;//DAI
     tokenAddresses[3] = 0x7122d7661c4564b7C6Cd4878B06766489a6028A2;//WMATIC
     tokenAddresses[4] = 0x4ECaBa5870353805a9F068101A40E0f32ed605C6;//USDT
     tokenAddresses[5] = 0xE2e73A1c69ecF83F464EFCE6A5be353a37cA09b2;//LINK
@@ -139,7 +137,7 @@ contract C10ETF is C10Token, C10Vault {
 
     _updateTokenBalance(); 
     updateAssetValues();
-    for (i = 0; i < 1; i++) {
+    for (i = 0; i < tokenAddresses.length; i++) {
         tokenBalance = (tokenBalances[tokenAddresses[i]]);//with 18 decimals
         tokenPrice = (assets[i].price / 1e8);
         Pool_Value = Pool_Value.add(tokenBalance.mul(tokenPrice));
@@ -154,3 +152,4 @@ contract C10ETF is C10Token, C10Vault {
     function getTVL()public view returns(uint256){
         return AUM_In_Usd;
     }
+}
