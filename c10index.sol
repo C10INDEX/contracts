@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./vault.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract C10Token is ERC20, ERC20Burnable, Ownable {
     constructor() ERC20("C10index", "C10") {}
@@ -27,6 +29,7 @@ contract C10INDEX is C10Token {
     //router pour uniswap qui work,mais a check pour oneinch!
     address public constant routerAddress = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     ISwapRouter public immutable swapRouter = ISwapRouter(routerAddress);
+    using SafeMath for uint256;
 
     address public constant USDC = 0x65aFADD39029741B3b8f0756952C74678c9cEC93;
     address public constant LINK = 0xe9c4393a23246293a8D31BF7ab68c17d4CF90A29;
@@ -34,6 +37,13 @@ contract C10INDEX is C10Token {
     IERC20 public linkToken = IERC20(LINK);
     address[2] public tokenAddresses;
     uint256[2] public Proportion;
+    uint256 public i = 0;
+    uint256 public j = 0;
+    uint256 public AUM_In_Usd;
+    uint256 public C10_Supply;
+    uint256 public C10_Price;
+
+
     C10Vault public vault;//CONTRACT DU VAULT
 
     //Chainlink data's array
@@ -41,9 +51,12 @@ contract C10INDEX is C10Token {
     //Assets structure array
     Asset[2] public assets;
 
+    event transaction_success(uint256 value);
     struct Asset 
     {
         uint256 price;
+        uint256 proportion;
+        uint256 dec;
     }
 
     constructor() {
@@ -64,13 +77,19 @@ contract C10INDEX is C10Token {
         vault.setC10ContractAsOwner(_vaultOwner);
     }
 
-    //["0xe9c4393a23246293a8D31BF7ab68c17d4CF90A29","0xe9c4393a23246293a8D31BF7ab68c17d4CF90A29"]
-    function setTokenAddresses(address[2] memory _tokenAddresses) public onlyOwner {
+    function get_supply() public view returns (uint256) {
+    return totalSupply();
+    }
+
+    function setTokenAddresses(address[] memory _tokenAddresses) public onlyOwner {
         tokenAddresses = _tokenAddresses;
     }
 
-    function setProportions(uint[2] memory _Proportion) public onlyOwner {
-        Proportion = _Proportion;
+    function setProportions(uint256[] memory _proportion) public onlyOwner {
+        for (i = 0; i < assets.lenght; i++)
+        {
+            assets[i].
+        }
     }
 
     function updateAssetValues() public 
@@ -121,14 +140,12 @@ contract C10INDEX is C10Token {
         }
         //mint(usdcAmount * 1e18);  
     }
-    function getTVL() public view returns(uint256 TVL) {
-       uint256 C10Price = 7;
-       TVL = (totalSupply() * C10Price); 
-       return TVL;
+    function get_c10()public view returns(uint256){
+        return AUM_In_Usd/ totalSupply();
     }
 
-    function getC10Price() public pure returns(uint256) {
-        uint256 C10Price = 700000000;
-        return C10Price;
+    function get_TVL()public view returns(uint256){
+        return AUM_In_Usd;
     }
+
 }
