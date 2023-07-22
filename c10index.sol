@@ -58,7 +58,7 @@ contract C10INDEX is C10Token {
         uint256 proportion;
         uint256 dec;
     }
-
+    //aller plus vite
     constructor() {
     Proportion[0] = 75;
     Proportion[1] = 25;
@@ -75,21 +75,20 @@ contract C10INDEX is C10Token {
 
     function changeVaultOwner(address _vaultOwner) public onlyOwner {
         vault.setC10ContractAsOwner(_vaultOwner);
+        
+    }
+
+    function mint_single(uint amount) public {
+         mint(amount * 1e18);
     }
 
     function get_supply() public view returns (uint256) {
-    return totalSupply();
+        return totalSupply();
     }
-
-    function setTokenAddresses(address[] memory _tokenAddresses) public onlyOwner {
-        tokenAddresses = _tokenAddresses;
-    }
-
-    function setProportions(uint256[] memory _proportion) public onlyOwner {
-        for (i = 0; i < assets.lenght; i++)
-        {
-            assets[i].
-        }
+    
+    struct Asset 
+    {
+        uint256 price;
     }
 
     function updateAssetValues() public 
@@ -101,17 +100,17 @@ contract C10INDEX is C10Token {
         }
     }
     //["0x48731cF7e84dc94C5f84577882c14Be11a5B7456","0x48731cF7e84dc94C5f84577882c14Be11a5B7456"]
-    function set_Oracle (address[] memory _priceFeedAddresses) public{
-        for (i = 0; i < _priceFeedAddresses.length; i++)
-        {
-            AggregatorV3Interface priceFeed = AggregatorV3Interface(_priceFeedAddresses[i]);
-            priceFeeds.push(priceFeed);
-        }
-        updateAssetValues();
-    }
+    // function set_Oracle (address[] memory _priceFeedAddresses) public{
+    //     for (i = 0; i < _priceFeedAddresses.length; i++)
+    //     {
+    //         AggregatorV3Interface priceFeed = AggregatorV3Interface(_priceFeedAddresses[i]);
+    //         priceFeeds.push(priceFeed);
+    //     }
+    //     updateAssetValues();
+    // }
 
     //test avec uniswap par simpliciter de doc, a demander a oneinch team pour unoswap?
-    function swap(uint256 amountIn) internal returns (uint256 amountOut)
+    function buy_swap(uint256 amountIn) internal returns (uint256 amountOut)
     {
         usdcToken.approve(address(swapRouter), amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -127,19 +126,78 @@ contract C10INDEX is C10Token {
             });
         amountOut = swapRouter.exactInputSingle(params);     
     }
+    //mieux qu une struct
+    mapping (address => uint256) public tokenBalances;
 
-    //dont need deposit function anymore,but need to approve spending in usdc contract
-    function buyETF(uint256 usdcAmount) external {    
-        
-        
-        require(usdcToken.allowance(msg.sender, address(this)) >= usdcAmount, "Error");
-        require(usdcToken.transferFrom(msg.sender, address(this), usdcAmount), "Error.");
-        //the swap sends values to the vault
-        for ( i = 0; i < 2; i++){
-            swap(Proportion[i]*usdcAmount /100);
+    function _updateTokenBalance() public{
+
+        for (i = 0; i < tokenAddresses.length; i++){
+            uint256 nextBalance = IERC20(tokenAddresses[i]).balanceOf(address(vault));//with decimals
+            tokenBalances[tokenAddresses[i]] = nextBalance;
         }
-        //mint(usdcAmount * 1e18);  
     }
+
+    uint256 public Pool_Value;
+
+    function _updatePoolValue() public returns(uint256){
+        
+        Pool_Value = 0;
+        _updateTokenBalance();// with decimals
+        updateAssetValues();
+        for (i = 0; i < tokenAddresses.length; i++) 
+        {
+            uint256 tokenBalance = tokenBalances[tokenAddresses[i]];
+            uint256 tokenPrice = assets[i].price /1e9;
+            Pool_Value = Pool_Value.add(tokenBalance.mul(tokenPrice));
+        }
+        return Pool_Value;
+    }
+
+
+    uint256 public AUM_In_Usd;
+    uint256 public C10_Supply;
+
+    function buyETF(uint256 usdcAmount) public  {    
+        IERC20 token = IERC20(USDC);
+        uint256 C10_Price;
+    
+        require(token.allowance(msg.sender, address(this)) >= usdcAmount, "Error");
+        require(token.transferFrom(msg.sender, address(this), usdcAmount), "Error.");
+        AUM_In_Usd = _updatePoolValue();
+        C10_Supply = totalSupply();
+        if (AUM_In_Usd == 0 && C10_Supply == 0){
+            C10_Price = 1000000;//10 dollars de base;
+        }
+        else {
+            C10_Price = AUM_In_Usd / C10_Supply;
+        }
+        for (i = 0; i < 2; i++){
+            buy_swap(Proportion[i]*usdcAmount /100);
+        }
+        mint((usdcAmount / C10_Price)* 1e18);
+    }
+
+    function sellETF(uint256 amount) public {
+        
+        address recipient = msg.sender;
+        
+        for (i = 0; i < priceFeeds.length; i++) 
+        {
+            (, int256 price, , , ) = priceFeeds[i].latestRoundData();
+            assets[i].price = uint256(price);
+        }
+        for (i = 0; i < 2; i++) {
+            uint256 amountToWithdraw = (amount * Proportion[i] / 100) / assets[i].price / 1e9;
+            vault.withdraw(tokenAddresses[i], amountToWithdraw);
+        }
+        i = 0;
+        for (j = 0; j < 2; j++) {
+            uint256 amountToSwap = (amount * Proportion[j] / 100) / assets[j].price / 1e9;
+            sell_swap(recipient,amountToSwap);
+        }
+         //emit transaction_success(amount);
+    }
+
     function get_c10()public view returns(uint256){
         return AUM_In_Usd/ totalSupply();
     }
@@ -147,5 +205,7 @@ contract C10INDEX is C10Token {
     function get_TVL()public view returns(uint256){
         return AUM_In_Usd;
     }
+
+
 
 }
